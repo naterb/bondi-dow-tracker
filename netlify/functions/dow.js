@@ -2,7 +2,14 @@
 // Uses DIA ETF (tracks DOW) and converts to approximate DOW value
 
 export default async (req) => {
-  const FINNHUB_KEY = process.env.FINNHUB_API_KEY || "d67l8v9r01qobepide3gd67l8v9r01qobepide40";
+  const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
+
+  if (!FINNHUB_KEY) {
+    return new Response(
+      JSON.stringify({ error: "FINNHUB_API_KEY not configured", dow: null }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     // Fetch DIA ETF quote (SPDR Dow Jones Industrial Average ETF)
@@ -17,16 +24,13 @@ export default async (req) => {
     const data = await response.json();
 
     // DIA tracks DOW at roughly 1/100th the value
-    // More precise: DOW ≈ DIA × divisor
-    // As of Feb 2026, DOW ~49500, DIA ~495 → ratio ~100.0
-    // We'll use the current known ratio for accuracy
-    const DIA_TO_DOW_RATIO = 99.91; // calibrated: 49451.98 / 494.97 ≈ 99.91
+    const DIA_TO_DOW_RATIO = 99.91;
 
-    const dowEstimate = data.c * DIA_TO_DOW_RATIO; // current price
-    const dowPrevClose = data.pc * DIA_TO_DOW_RATIO; // previous close
-    const dowOpen = data.o * DIA_TO_DOW_RATIO; // open
-    const dowHigh = data.h * DIA_TO_DOW_RATIO; // high
-    const dowLow = data.l * DIA_TO_DOW_RATIO; // low
+    const dowEstimate = data.c * DIA_TO_DOW_RATIO;
+    const dowPrevClose = data.pc * DIA_TO_DOW_RATIO;
+    const dowOpen = data.o * DIA_TO_DOW_RATIO;
+    const dowHigh = data.h * DIA_TO_DOW_RATIO;
+    const dowLow = data.l * DIA_TO_DOW_RATIO;
 
     const result = {
       dow: Math.round(dowEstimate * 100) / 100,
