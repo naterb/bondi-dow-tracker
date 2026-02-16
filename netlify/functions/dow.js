@@ -1,5 +1,8 @@
 // Netlify serverless function to fetch DOW price via Finnhub
 // Uses DIA ETF (tracks DOW) and converts to approximate DOW value
+// Tracks last time above 50K using Netlify Blobs
+
+import { getStore } from "@netlify/blobs";
 
 export default async (req) => {
   const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
@@ -32,6 +35,29 @@ export default async (req) => {
     const dowHigh = data.h * DIA_TO_DOW_RATIO;
     const dowLow = data.l * DIA_TO_DOW_RATIO;
 
+    // Track last time above 50K using Netlify Blobs
+    const store = getStore("dow-tracker");
+    let lastAbove50k = null;
+
+    if (dowEstimate >= 50000) {
+      // Currently above 50K — save this timestamp
+      const now = new Date().toISOString();
+      await store.set("lastAbove50k", now);
+      lastAbove50k = now;
+    } else {
+      // Below 50K — read the last time it was above
+      try {
+        lastAbove50k = await store.get("lastAbove50k");
+      } catch (e) {
+        lastAbove50k = null;
+      }
+
+      // Fallback if no record exists yet
+      if (!lastAbove50k) {
+        lastAbove50k = "2026-02-11T20:00:00.000Z";
+      }
+    }
+
     const result = {
       dow: Math.round(dowEstimate * 100) / 100,
       previousClose: Math.round(dowPrevClose * 100) / 100,
@@ -42,6 +68,7 @@ export default async (req) => {
       changePercent: Math.round(((dowEstimate - dowPrevClose) / dowPrevClose) * 10000) / 100,
       timestamp: data.t,
       above50k: dowEstimate >= 50000,
+      lastAbove50k: lastAbove50k,
       source: "Finnhub (DIA ETF estimate)",
       raw_dia: data.c,
     };
