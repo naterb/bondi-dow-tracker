@@ -2,5 +2,8 @@
   "name": "bondi-dow-tracker",
   "version": "1.0.0",
   "description": "What should we be talking about? According to AG Pam Bondi, it depends on the DOW.",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
 }
